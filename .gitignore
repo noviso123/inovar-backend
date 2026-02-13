@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Environment & Secrets
+.env
+.env.local
+*.env.local
+
+# Vercel
+.vercel
+
+# Go
+go.sum
+
+# Binaries
+*.exe
+*.o
+*.a
+bin/
+.env*.local
