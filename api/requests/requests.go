@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"inovar/lib/shared"
 	"net/http"
+	"time"
 )
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
@@ -275,4 +276,157 @@ func DeleteAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shared.SuccessResponse(w, map[string]string{"message": "Attachment deleted"})
+}
+
+// UpdateDetailsHandler - PATCH /api/requests/{id}/details
+func UpdateDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	id := r.PathValue("id")
+	var req shared.Request
+	if err := shared.GetDB().First(&req, id).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusNotFound, "Request not found")
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid data")
+		return
+	}
+
+	if err := shared.GetDB().Model(&req).Updates(updates).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Update failed")
+		return
+	}
+
+	shared.SuccessResponse(w, req)
+}
+
+// AssignHandler - PATCH /api/requests/{id}/assign
+func AssignHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	id := r.PathValue("id")
+	var reqBody struct {
+		ResponsibleId   string `json:"responsibleId"`
+		ResponsibleName string `json:"responsibleName"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid data")
+		return
+	}
+
+	if err := shared.GetDB().Model(&shared.Request{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"assigned_to": reqBody.ResponsibleId,
+	}).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Assign failed")
+		return
+	}
+
+	shared.SuccessResponse(w, map[string]string{"message": "Request assigned successfully"})
+}
+
+// ConfirmHandler - POST /api/requests/{id}/confirm
+func ConfirmHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	userId, err := shared.ValidateToken(token)
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	id := r.PathValue("id")
+	now := time.Now()
+	if err := shared.GetDB().Model(&shared.Request{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status":       "CONCLUIDA",
+		"confirmed_at": &now,
+		"confirmed_by": userId,
+	}).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Confirmation failed")
+		return
+	}
+
+	shared.SuccessResponse(w, map[string]string{"message": "Request confirmed successfully"})
+}
+
+// HistoryHandler - GET /api/requests/{id}/history
+func HistoryHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	id := r.PathValue("id")
+	var logs []shared.AuditLog
+	if err := shared.GetDB().Where("entity = ? AND details LIKE ?", "REQUEST", "%"+id+"%").Order("created_at DESC").Find(&logs).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Query failed")
+		return
+	}
+
+	shared.SuccessResponse(w, logs)
+}
+
+// ListAttachmentsHandler - GET /api/requests/{id}/attachments
+func ListAttachmentsHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// For MVP, we're returning empty or listing from storage if we had a list method there.
+	// Since we don't have a list method in storage.go yet, let's return a JSON indicating it.
+	// In a full implementation, we'd have an Attachments table.
+	// Let's assume for now we don't have a table and return an empty list or mock.
+	shared.SuccessResponse(w, []string{})
 }

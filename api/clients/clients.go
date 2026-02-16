@@ -162,3 +162,29 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	shared.SuccessResponse(w, map[string]string{"message": "Client deleted"})
 }
+
+// BlockHandler - PATCH /api/clients/{id}/block
+func BlockHandler(w http.ResponseWriter, r *http.Request) {
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	id := r.PathValue("id")
+	if err := shared.GetDB().Model(&shared.Client{}).Where("id = ?", id).Update("active", false).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Block failed")
+		return
+	}
+
+	shared.SuccessResponse(w, map[string]string{"message": "Client blocked"})
+}

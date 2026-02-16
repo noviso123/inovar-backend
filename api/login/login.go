@@ -263,3 +263,10 @@ func UpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	shared.SuccessResponse(w, user)
 }
+
+// LogoutHandler - POST /api/auth/logout
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// For JWT, logout is primarily handled by the client clearing the token.
+	// We return success to satisfy the frontend.
+	shared.SuccessResponse(w, map[string]string{"message": "Logged out successfully"})
+}

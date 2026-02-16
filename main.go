@@ -57,12 +57,14 @@ func main() {
 	mux.HandleFunc("POST /api/auth/change-password", login.ChangePasswordHandler)
 	mux.HandleFunc("POST /api/auth/forgot-password", login.ForgotPasswordHandler)
 	mux.HandleFunc("POST /api/auth/reset-password", login.ResetPasswordHandler)
+	mux.HandleFunc("POST /api/auth/logout", login.LogoutHandler)
 
 	// Clients
 	mux.HandleFunc("GET /api/clients", clients.ListHandler)
 	mux.HandleFunc("POST /api/clients", clients.CreateHandler)
 	mux.HandleFunc("GET /api/clients/{id}", clients.GetHandler)
 	mux.HandleFunc("PUT /api/clients/{id}", clients.UpdateHandler)
+	mux.HandleFunc("PATCH /api/clients/{id}/block", clients.BlockHandler)
 	mux.HandleFunc("DELETE /api/clients/{id}", clients.DeleteHandler)
 
 	// Users
@@ -79,6 +81,11 @@ func main() {
 	mux.HandleFunc("POST /api/requests", requests.CreateHandler)
 	mux.HandleFunc("GET /api/requests/{id}", requests.GetHandler)
 	mux.HandleFunc("PATCH /api/requests/{id}/status", requests.UpdateStatusHandler)
+	mux.HandleFunc("PATCH /api/requests/{id}/details", requests.UpdateDetailsHandler)
+	mux.HandleFunc("PATCH /api/requests/{id}/assign", requests.AssignHandler)
+	mux.HandleFunc("POST /api/requests/{id}/confirm", requests.ConfirmHandler)
+	mux.HandleFunc("GET /api/requests/{id}/history", requests.HistoryHandler)
+	mux.HandleFunc("GET /api/requests/{id}/attachments", requests.ListAttachmentsHandler)
 	mux.HandleFunc("DELETE /api/requests/{id}", requests.DeleteHandler)
 	mux.HandleFunc("POST /api/requests/{id}/attachments", requests.UploadAttachmentHandler)
 	mux.HandleFunc("DELETE /api/requests/{id}/attachments/{fileId}", requests.DeleteAttachmentHandler)
@@ -147,6 +154,8 @@ func main() {
 	// System
 	mux.HandleFunc("GET /api/system/whatsapp", system.WhatsAppStatusHandler)
 	mux.HandleFunc("GET /api/system/routes", system.RoutesHandler)
+	mux.HandleFunc("GET /api/system/tables", system.TablesHandler)
+	mux.HandleFunc("GET /api/system/tables/{tableName}", system.TableDataHandler)
 
 	// Wrap with CORS and Logging
 	handler := corsMiddleware(loggingMiddleware(mux))
