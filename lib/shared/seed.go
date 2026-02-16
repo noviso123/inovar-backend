@@ -10,7 +10,8 @@ import (
 
 // SeedAdmin checks if admin user exists, if not creates it.
 // If it exists, it UPDATES the password to ensure access.
-func SeedAdmin() {
+// Returns error for API error handling.
+func SeedAdmin() error {
 	// Ensure DB connection is available
 	db := GetDB()
 
@@ -27,6 +28,7 @@ func SeedAdmin() {
 		END $$;
 	`).Error; err != nil {
 		log.Printf("❌ Failed to wipe database: %v", err)
+		return err
 	} else {
 		log.Println("✅ Database wiped successfully (All tables truncated)")
 	}
@@ -50,10 +52,11 @@ func SeedAdmin() {
 			"role":                 "ADMIN_SISTEMA", // Maintain role
 		}).Error; err != nil {
 			log.Printf("❌ Failed to update admin user: %v", err)
+			return err
 		} else {
 			log.Printf("✅ Admin user credentials updated (password reset): %s", email)
 		}
-		return
+		return nil
 	}
 
 	// Create user if not exists
@@ -69,9 +72,11 @@ func SeedAdmin() {
 
 	if err := db.Create(&newUser).Error; err != nil {
 		log.Printf("❌ Failed to seed admin user: %v", err)
-	} else {
-		log.Printf("🚀 Admin user seeded successfully: %s", email)
+		return err
 	}
+
+	log.Printf("🚀 Admin user seeded successfully: %s", email)
+	return nil
 }
 
 func generateSeedUUID() string {

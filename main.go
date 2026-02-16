@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"inovar/api/admin"
 	"inovar/api/agenda"
 	"inovar/api/audit"
 	"inovar/api/budget"
@@ -58,6 +59,9 @@ func main() {
 		}
 		shared.ErrorResponse(w, http.StatusNotFound, "Route not found: "+r.Method+" "+r.URL.Path)
 	})
+
+	// Admin Routes (Manual Wipe)
+	mux.HandleFunc("POST /api/admin/wipe", admin.WipeHandler)
 
 	// Auth
 	mux.HandleFunc("POST /api/login", login.LoginHandler)
