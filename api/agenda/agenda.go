@@ -83,7 +83,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var entry shared.AgendaEntry
-	if err := shared.GetDB().First(&entry, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&entry).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Entry not found")
 		return
 	}

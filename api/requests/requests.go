@@ -101,7 +101,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var req shared.Request
-	if err := shared.GetDB().First(&req, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&req).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Request not found")
 		return
 	}
@@ -127,7 +127,7 @@ func UpdateStatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var req shared.Request
-	if err := shared.GetDB().First(&req, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&req).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Request not found")
 		return
 	}
@@ -189,7 +189,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := r.PathValue("id")
-	if err := shared.GetDB().Delete(&shared.Request{}, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).Delete(&shared.Request{}).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Delete failed")
 		return
 	}
@@ -297,7 +297,7 @@ func UpdateDetailsHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var req shared.Request
-	if err := shared.GetDB().First(&req, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&req).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Request not found")
 		return
 	}

@@ -93,7 +93,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var equip shared.Equipment
-	if err := shared.GetDB().First(&equip, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&equip).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Equipment not found")
 		return
 	}
@@ -119,7 +119,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var equip shared.Equipment
-	if err := shared.GetDB().First(&equip, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&equip).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Equipment not found")
 		return
 	}
@@ -155,7 +155,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := shared.GetDB().Delete(&shared.Equipment{}, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).Delete(&shared.Equipment{}).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Delete failed")
 		return
 	}

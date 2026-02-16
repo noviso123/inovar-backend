@@ -85,7 +85,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var item shared.ChecklistItem
-	if err := shared.GetDB().First(&item, itemId).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", itemId).First(&item).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Item not found")
 		return
 	}

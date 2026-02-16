@@ -89,7 +89,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var client shared.Client
-	if err := shared.GetDB().First(&client, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&client).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Client not found")
 		return
 	}
@@ -115,7 +115,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var client shared.Client
-	if err := shared.GetDB().First(&client, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&client).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "Client not found")
 		return
 	}
