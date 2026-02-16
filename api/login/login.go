@@ -14,21 +14,6 @@ type LoginRequest struct {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// CORS - allow frontend domain
-	origin := r.Header.Get("Origin")
-	if origin == "https://inovar-gestao.vercel.app" || origin == "http://localhost:5173" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	} else {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	}
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
 	if r.Method != "POST" {
 		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
@@ -87,21 +72,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func MeHandler(w http.ResponseWriter, r *http.Request) {
-	// CORS - allow frontend domain
-	origin := r.Header.Get("Origin")
-	if origin == "https://inovar-gestao.vercel.app" || origin == "http://localhost:5173" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	} else {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	}
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
 	if r.Method != "GET" {
 		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
