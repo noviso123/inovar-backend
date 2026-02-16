@@ -47,7 +47,7 @@ func main() {
 			w.Write([]byte("Inovar Backend Running"))
 			return
 		}
-		shared.ErrorResponse(w, http.StatusNotFound, "Route not found or method not allowed")
+		shared.ErrorResponse(w, http.StatusNotFound, "Route not found or method not allowed: "+r.Method+" "+r.URL.Path)
 	})
 
 	// Auth
