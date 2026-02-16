@@ -90,7 +90,7 @@ func DeleteFromSupabase(filePath string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusOK { // 200 or 204? Usually 200.
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent { // 200 or 204 are typical for deletes
 		// Check for 404?
 		if resp.StatusCode == http.StatusNotFound {
 			return nil // Already deleted

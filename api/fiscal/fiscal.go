@@ -162,3 +162,26 @@ func GetEventosHandler(w http.ResponseWriter, r *http.Request) {
 	// Stub return empty list
 	shared.SuccessResponse(w, []string{})
 }
+func RegimesHandler(w http.ResponseWriter, r *http.Request) {
+	shared.SuccessResponse(w, map[string]interface{}{
+		"regimes": []map[string]string{
+			{"id": "simples_nacional", "name": "Simples Nacional"},
+			{"id": "lucro_presumido", "name": "Lucro Presumido"},
+			{"id": "lucro_real", "name": "Lucro Real"},
+		},
+		"motivosCancelamento": []map[string]interface{}{
+			{"id": 1, "name": "Erro de emissão"},
+			{"id": 2, "name": "Serviço não prestado"},
+		},
+	})
+}
+
+func LookupCNPJHandler(w http.ResponseWriter, r *http.Request) {
+	cnpj := r.PathValue("cnpj")
+	// Mock lookup
+	shared.SuccessResponse(w, map[string]interface{}{
+		"razaoSocial": "Empresa Mock Ltda",
+		"cnpj":        cnpj,
+		"situacao":    "ATIVA",
+	})
+}

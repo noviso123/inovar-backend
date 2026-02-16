@@ -65,7 +65,9 @@ func main() {
 	mux.HandleFunc("POST /api/users", users.CreateHandler)
 	mux.HandleFunc("GET /api/users/{id}", users.GetHandler)
 	mux.HandleFunc("PUT /api/users/{id}", users.UpdateHandler)
+	mux.HandleFunc("PATCH /api/users/{id}/block", users.BlockUserHandler)
 	mux.HandleFunc("DELETE /api/users/{id}", users.DeleteHandler)
+	mux.HandleFunc("POST /api/users/{id}/reset-password", users.AdminResetPasswordHandler)
 
 	// Requests
 	mux.HandleFunc("GET /api/requests", requests.ListHandler)
@@ -125,6 +127,8 @@ func main() {
 	mux.HandleFunc("POST /api/requests/{id}/nfse/cancelar", fiscal.CancelNFSeWithReasonHandler)
 	mux.HandleFunc("GET /api/requests/{id}/nfse/danfse", fiscal.GetDANFSeHandler)
 	mux.HandleFunc("GET /api/requests/{id}/nfse/eventos", fiscal.GetEventosHandler)
+	mux.HandleFunc("GET /api/fiscal/regimes", fiscal.RegimesHandler)
+	mux.HandleFunc("GET /api/fiscal/lookup/{cnpj}", fiscal.LookupCNPJHandler)
 
 	// Budget (Orcamento)
 	mux.HandleFunc("GET /api/requests/orcamento/sugestoes", budget.SugestoesHandler)

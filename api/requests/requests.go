@@ -23,13 +23,26 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// List requests - optimized with status priority
+	// Filters
+	query := shared.GetDB().Model(&shared.Request{})
+
+	status := r.URL.Query().Get("status")
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	priority := r.URL.Query().Get("priority")
+	if priority != "" {
+		query = query.Where("priority = ?", priority)
+	}
+
+	clientId := r.URL.Query().Get("clientId")
+	if clientId != "" {
+		query = query.Where("client_id = ?", clientId)
+	}
+
 	var requests []shared.Request
-	if err := shared.GetDB().
-		Where("status != ?", "completed").       // Exclude completed (most queries)
-		Order("priority DESC, created_at DESC"). // High priority + recent first
-		Limit(100).
-		Find(&requests).Error; err != nil {
+	if err := query.Order("priority DESC, created_at DESC").Limit(100).Find(&requests).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Query failed")
 		return
 	}
@@ -119,8 +132,12 @@ func UpdateStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type StatusUpdate struct {
-		Status      string `json:"status"`
-		Observation string `json:"observation,omitempty"`
+		Status            string `json:"status"`
+		Observation       string `json:"observation"`
+		MaterialsUsed     string `json:"materialsUsed"`
+		NextMaintenanceAt string `json:"nextMaintenanceAt"`
+		ScheduledAt       string `json:"scheduledAt"`
+		PreventiveDone    bool   `json:"preventiveDone"`
 	}
 	var update StatusUpdate
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
@@ -128,17 +145,25 @@ func UpdateStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update status and observation if provided
-	req.Status = update.Status // Assuming Status field exists and type matches
-	// If observation is part of the request model, update it.
-	// The apiService sends { status, observation, materialsUsed, nextMaintenanceAt, scheduledAt, preventiveDone }
-	// We should probably decode into a map or the struct itself if fields match.
-	// For safety, let's use map or partial struct.
+	updates := map[string]interface{}{
+		"status":          update.Status,
+		"observation":     update.Observation,
+		"materials_used":  update.MaterialsUsed,
+		"preventive_done": update.PreventiveDone,
+	}
 
-	if err := shared.GetDB().Model(&req).Updates(map[string]interface{}{
-		"status": update.Status,
-		// "observation": update.Observation, // Add if model supports it
-	}).Error; err != nil {
+	if update.NextMaintenanceAt != "" {
+		if t, err := shared.ParseDateTime(update.NextMaintenanceAt); err == nil {
+			updates["next_maintenance_at"] = t
+		}
+	}
+	if update.ScheduledAt != "" {
+		if t, err := shared.ParseDateTime(update.ScheduledAt); err == nil {
+			updates["scheduled_at"] = t
+		}
+	}
+
+	if err := shared.GetDB().Model(&req).Updates(updates).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Update failed")
 		return
 	}

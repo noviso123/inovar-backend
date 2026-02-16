@@ -36,17 +36,22 @@ type Client struct {
 
 // Request model (Service Request)
 type Request struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	Title       string    `json:"title" gorm:"not null"`
-	Description string    `json:"description"`
-	Status      string    `json:"status" gorm:"default:pending"` // pending, in_progress, completed
-	Priority    string    `json:"priority"`                      // low, medium, high
-	ClientID    uint      `json:"clientId" gorm:"column:client_id"`
-	CompanyID   uint      `json:"companyId" gorm:"column:company_id"`
-	CreatedBy   uint      `json:"createdBy" gorm:"column:created_by"`
-	AssignedTo  *uint     `json:"assignedTo" gorm:"column:assigned_to"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID                uint       `json:"id" gorm:"primaryKey"`
+	Title             string     `json:"title" gorm:"not null"`
+	Description       string     `json:"description"`
+	Status            string     `json:"status" gorm:"default:pending"` // pending, in_progress, completed
+	Priority          string     `json:"priority"`                      // low, medium, high
+	ClientID          uint       `json:"clientId" gorm:"column:client_id"`
+	CompanyID         uint       `json:"companyId" gorm:"column:company_id"`
+	CreatedBy         uint       `json:"createdBy" gorm:"column:created_by"`
+	AssignedTo        *uint      `json:"assignedTo" gorm:"column:assigned_to"`
+	CreatedAt         time.Time  `json:"createdAt"`
+	UpdatedAt         time.Time  `json:"updatedAt"`
+	Observation       string     `json:"observation"`
+	MaterialsUsed     string     `json:"materialsUsed"`
+	NextMaintenanceAt *time.Time `json:"nextMaintenanceAt"`
+	ScheduledAt       *time.Time `json:"scheduledAt"`
+	PreventiveDone    bool       `json:"preventiveDone"`
 }
 
 type Equipment struct {
@@ -139,7 +144,7 @@ type OrcamentoItem struct {
 	Quantidade float64   `json:"quantidade"`
 	ValorUnit  float64   `json:"valorUnit" gorm:"column:valor_unit"`
 	Tipo       string    `json:"tipo"` // peca, mao_de_obra
-	Aprovado   bool      `json:"aprovar" gorm:"default:false"`
+	Aprovado   bool      `json:"orcamentoAprovado" gorm:"column:aprovado;default:false"`
 	CreatedAt  time.Time `json:"createdAt"`
 }
 

@@ -191,3 +191,33 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	shared.SuccessResponse(w, map[string]string{"message": "User deleted"})
 }
+func BlockUserHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+	if err := shared.GetDB().Model(&shared.User{}).Where("id = ?", id).Update("active", false).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Update failed")
+		return
+	}
+	shared.SuccessResponse(w, map[string]interface{}{"success": true})
+}
+
+func AdminResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+	// Reset to a default password (e.g., '123456') and require change
+	hash, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	if err := shared.GetDB().Model(&shared.User{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"password_hash":        string(hash),
+		"must_change_password": true,
+	}).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Reset failed")
+		return
+	}
+	shared.SuccessResponse(w, map[string]interface{}{"success": true, "message": "Password reset to 123456"})
+}
