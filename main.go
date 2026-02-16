@@ -40,34 +40,20 @@ func main() {
 	// Define Routes (Go 1.22+)
 	mux := http.NewServeMux()
 
-	// General Health Check
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			shared.ErrorResponse(w, http.StatusNotFound, "Route not found: "+r.Method+" "+r.URL.Path)
+	// Public Health Check / Catch-all
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || r.URL.Path == "/api" || r.URL.Path == "/api/" {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("Inovar Backend Running"))
 			return
 		}
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Inovar Backend Running"))
-	})
-
-	// API Health Check (Handles /api and /api/)
-	mux.HandleFunc("GET /api", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Inovar API Running"))
-	})
-	mux.HandleFunc("GET /api/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("Inovar API Running"))
-	})
-
-	// Catch-all for non-matching API routes (Returns JSON error for invalid routes to avoid "Unexpected token M")
-	// This must be defined after all specific API routes to act as a fallback for /api/*
-	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
-		// If it's an OPTIONS request, it might be a preflight for a valid route, so let CORS handle it.
-		// Otherwise, it's an unhandled API route.
-		if r.Method != "OPTIONS" {
-			shared.ErrorResponse(w, http.StatusNotFound, "API route not found or method not allowed: "+r.Method+" "+r.URL.Path)
+		// Fallback for everything else
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("Inovar Backend Running"))
+			return
 		}
+		shared.ErrorResponse(w, http.StatusNotFound, "Route not found: "+r.Method+" "+r.URL.Path)
 	})
 
 	// Auth
