@@ -3,6 +3,7 @@
 import (
 	"encoding/json"
 	"inovar/lib/shared"
+	"log"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
@@ -34,17 +35,19 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Find user
 	var user shared.User
+	// Basic columns confirmed by screenshot
 	if err := shared.GetDB().
-		Select("id, name, email, password_hash, role, company_id, must_change_password, active").
-		Where("email = ?", req.Email). // Case sensitivity depends on DB, but email should be unique
+		Select("id, name, email, password_hash, role").
+		Where("email = ?", req.Email).
 		First(&user).Error; err != nil {
+		log.Printf("Login failed for %s: %v", req.Email, err)
 		shared.ErrorResponse(w, http.StatusUnauthorized, "Credenciais inválidas")
 		return
 	}
 
-	// Check if active
-	if !user.Active {
-		shared.ErrorResponse(w, http.StatusUnauthorized, "Sua conta está inativa. Entre em contato com o suporte.")
+	// Check if active (if field exists and is false)
+	if user.Active != nil && !*user.Active {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Sua conta está inativa.")
 		return
 	}
 

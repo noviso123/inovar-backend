@@ -6,14 +6,14 @@ import (
 
 // User model
 type User struct {
-	ID                 string    `json:"id" gorm:"primaryKey;type:uuid"`
+	ID                 string    `json:"id" gorm:"primaryKey;type:varchar"`
 	Name               string    `json:"name"`
 	Email              string    `json:"email" gorm:"unique;not null"`
 	PasswordHash       string    `json:"-" gorm:"column:password_hash"`
 	Role               string    `json:"role"` // ADMIN_SISTEMA, PRESTADOR, TECNICO, CLIENTE
 	CompanyID          *string   `json:"companyId" gorm:"column:company_id"`
-	Active             bool      `json:"active" gorm:"default:true"`
-	MustChangePassword bool      `json:"mustChangePassword" gorm:"column:must_change_password;default:false"`
+	Active             *bool     `json:"active" gorm:"default:true"`
+	MustChangePassword *bool     `json:"mustChangePassword" gorm:"column:must_change_password;default:false"`
 	AvatarURL          *string   `json:"avatarUrl" gorm:"column:avatar_url"`
 	Phone              *string   `json:"phone"`
 	CreatedAt          time.Time `json:"createdAt" gorm:"column:created_at"`

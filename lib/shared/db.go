@@ -26,12 +26,12 @@ func InitDB() error {
 
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-		// Optimize for serverless - prepare statements
+		Logger:      logger.Default.LogMode(logger.Info), // Increased log level for better visibility
 		PrepareStmt: true,
 	})
 
 	if err != nil {
+		log.Printf("❌ Database connection failed: %v", err)
 		return err
 	}
 
