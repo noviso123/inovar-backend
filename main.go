@@ -175,6 +175,7 @@ func main() {
 	mux.HandleFunc("GET /api/system/whatsapp", system.WhatsAppStatusHandler)
 	mux.HandleFunc("GET /api/system/routes", system.RoutesHandler)
 	mux.HandleFunc("GET /api/system/tables", system.TablesHandler)
+	mux.HandleFunc("GET /api/system/buckets", system.BucketsHandler)
 	mux.HandleFunc("GET /api/system/tables/{tableName}", system.TableDataHandler)
 
 	// Wrap with CORS, Path Resilience, and Logging

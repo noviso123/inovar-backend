@@ -1,8 +1,11 @@
 package system
 
 import (
+	"encoding/json"
+	"fmt"
 	"inovar/lib/shared"
 	"net/http"
+	"os"
 )
 
 func WhatsAppStatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,13 +27,45 @@ func RoutesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TablesHandler(w http.ResponseWriter, r *http.Request) {
-	// Return the list of Portuguese tables from our models (or DB directly)
-	tables := []string{
-		"users", "clientes", "solicitacoes", "equipamentos",
-		"checklists", "agenda", "empresas", "financeiro",
-		"audit_logs", "configuracoes", "orcamentos", "assinaturas", "nfse",
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	var tables []string
+	// Query real tables from postgres
+	err := shared.GetDB().Raw("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'").Scan(&tables).Error
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Query failed: "+err.Error())
+		return
 	}
 	shared.SuccessResponse(w, tables)
+}
+
+func BucketsHandler(w http.ResponseWriter, r *http.Request) {
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	supabaseKey := os.Getenv("SUPABASE_KEY")
+
+	if supabaseURL == "" || supabaseKey == "" {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Supabase credentials not configured")
+		return
+	}
+
+	url := fmt.Sprintf("%s/storage/v1/bucket", supabaseURL)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+supabaseKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Request failed: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+
+	var data interface{}
+	json.NewDecoder(resp.Body).Decode(&data)
+	shared.SuccessResponse(w, data)
 }
 
 func TableDataHandler(w http.ResponseWriter, r *http.Request) {
