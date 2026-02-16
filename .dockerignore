@@ -1,0 +1,7 @@
+.git
+.env
+tmp
+reset_password.py
+*.ps1
+*.json
+README.md
