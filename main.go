@@ -37,6 +37,9 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	// Seed admin user on startup
+	go shared.SeedAdmin()
+
 	// Define Routes (Go 1.22+)
 	mux := http.NewServeMux()
 
