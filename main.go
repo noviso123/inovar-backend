@@ -39,10 +39,15 @@ func main() {
 	// Define Routes (Go 1.22+)
 	mux := http.NewServeMux()
 
-	// Root Health Check
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Inovar Backend Running"))
+	// Catch-all / Health Check (Returns JSON error for invalid routes to avoid "Unexpected token M")
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" && r.Method == "GET" {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Inovar Backend Running"))
+			return
+		}
+		shared.ErrorResponse(w, http.StatusNotFound, "Route not found or method not allowed")
 	})
 
 	// Auth
