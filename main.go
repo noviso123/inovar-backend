@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"inovar/api/agenda"
 	"inovar/api/audit"
@@ -39,15 +40,34 @@ func main() {
 	// Define Routes (Go 1.22+)
 	mux := http.NewServeMux()
 
-	// Catch-all / Health Check (Returns JSON error for invalid routes to avoid "Unexpected token M")
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" && r.Method == "GET" {
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Inovar Backend Running"))
+	// General Health Check
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			shared.ErrorResponse(w, http.StatusNotFound, "Route not found: "+r.Method+" "+r.URL.Path)
 			return
 		}
-		shared.ErrorResponse(w, http.StatusNotFound, "Route not found or method not allowed: "+r.Method+" "+r.URL.Path)
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Inovar Backend Running"))
+	})
+
+	// API Health Check (Handles /api and /api/)
+	mux.HandleFunc("GET /api", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Inovar API Running"))
+	})
+	mux.HandleFunc("GET /api/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("Inovar API Running"))
+	})
+
+	// Catch-all for non-matching API routes (Returns JSON error for invalid routes to avoid "Unexpected token M")
+	// This must be defined after all specific API routes to act as a fallback for /api/*
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		// If it's an OPTIONS request, it might be a preflight for a valid route, so let CORS handle it.
+		// Otherwise, it's an unhandled API route.
+		if r.Method != "OPTIONS" {
+			shared.ErrorResponse(w, http.StatusNotFound, "API route not found or method not allowed: "+r.Method+" "+r.URL.Path)
+		}
 	})
 
 	// Auth
@@ -157,8 +177,8 @@ func main() {
 	mux.HandleFunc("GET /api/system/tables", system.TablesHandler)
 	mux.HandleFunc("GET /api/system/tables/{tableName}", system.TableDataHandler)
 
-	// Wrap with CORS and Logging
-	handler := corsMiddleware(loggingMiddleware(mux))
+	// Wrap with CORS, Path Resilience, and Logging
+	handler := pathResilienceMiddleware(corsMiddleware(loggingMiddleware(mux)))
 
 	// Start Server
 	port := os.Getenv("PORT")
@@ -205,6 +225,17 @@ func corsMiddleware(next http.Handler) http.Handler {
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s %s", r.Method, r.RequestURI, r.RemoteAddr)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func pathResilienceMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If it starts with /api (case insensitive), ensure it's lowercase for the mux
+		// This handles /API/login -> /api/login and /API -> /api
+		if len(r.URL.Path) >= 4 && strings.EqualFold(r.URL.Path[:4], "/api") {
+			r.URL.Path = "/api" + r.URL.Path[4:]
+		}
 		next.ServeHTTP(w, r)
 	})
 }
