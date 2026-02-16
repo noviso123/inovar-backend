@@ -63,7 +63,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If no ID, create
-	if company.ID == 0 {
+	if company.ID == "" {
 		if err := shared.GetDB().Create(&updates).Error; err != nil {
 			shared.ErrorResponse(w, http.StatusInternalServerError, "Create failed")
 			return

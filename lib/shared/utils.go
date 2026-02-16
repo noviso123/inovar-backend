@@ -19,7 +19,7 @@ func GenerateToken(user *User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userId":    user.ID,
+		"userId":    user.ID, // Now a string (UUID)
 		"email":     user.Email,
 		"role":      user.Role,
 		"companyId": user.CompanyID,
@@ -30,7 +30,7 @@ func GenerateToken(user *User) (string, error) {
 }
 
 // ValidateToken validates a JWT token and returns user ID
-func ValidateToken(tokenString string) (uint, error) {
+func ValidateToken(tokenString string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -38,15 +38,18 @@ func ValidateToken(tokenString string) (uint, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return 0, fmt.Errorf("invalid token")
+		return "", fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, fmt.Errorf("invalid claims")
+		return "", fmt.Errorf("invalid claims")
 	}
 
-	userID := uint(claims["userId"].(float64))
+	userID, ok := claims["userId"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid userID in claims")
+	}
 	return userID, nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"inovar/lib/shared"
 	"net/http"
-	"strconv"
 )
 
 // ListItemsHandler - GET /api/requests/{requestId}/orcamento/itens (Not explicitly in apiService but good to have)
@@ -38,12 +37,7 @@ func AddItemHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requestIdStr := r.PathValue("id")
-	requestID, err := strconv.ParseUint(requestIdStr, 10, 32)
-	if err != nil {
-		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid Request ID")
-		return
-	}
+	requestID := r.PathValue("id")
 
 	var item shared.OrcamentoItem
 	if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
@@ -51,7 +45,7 @@ func AddItemHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item.RequestID = uint(requestID)
+	item.RequestID = requestID
 
 	if err := shared.InitDB(); err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")

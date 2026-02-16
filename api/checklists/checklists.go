@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"inovar/lib/shared"
 	"net/http"
-	"strconv"
 )
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,10 +56,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Force RequestID from path
-	// Convert string path value to uint
-	if id, err := strconv.Atoi(requestId); err == nil {
-		item.RequestID = uint(id)
-	}
+	item.RequestID = requestId
 
 	if err := shared.GetDB().Create(&item).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Create failed")

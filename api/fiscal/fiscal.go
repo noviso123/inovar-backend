@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"inovar/lib/shared"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -46,13 +45,7 @@ func IssueNFSeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requestIdStr := r.PathValue("id")
-	requestID, err := strconv.ParseUint(requestIdStr, 10, 32)
-	if err != nil {
-		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid Request ID")
-		return
-	}
-
+	requestID := r.PathValue("id")
 	if err := shared.InitDB(); err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
 		return
@@ -60,8 +53,8 @@ func IssueNFSeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Mock Issue Logic
 	nfse := shared.NFSe{
-		RequestID: uint(requestID),
-		Numero:    "2023000" + requestIdStr, // Mock number
+		RequestID: requestID,
+		Numero:    "2023000" + requestID, // Mock number
 		Status:    "emitido",
 		PDFURL:    "https://example.com/nfse.pdf",
 		XMLURL:    "https://example.com/nfse.xml",
