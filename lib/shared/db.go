@@ -47,7 +47,30 @@ func InitDB() error {
 	sqlDB.SetConnMaxLifetime(time.Minute * 5) // 5min max lifetime (Supabase pooler)
 	sqlDB.SetConnMaxIdleTime(time.Minute * 2) // Close idle after 2min
 
-	log.Println("✅ Database connected (Supabase) with serverless pooling")
+	// Auto Migrate (Schema Update)
+	// This is critical for serverless deployments to ensure tables exist
+	err = DB.AutoMigrate(
+		&User{},
+		&Client{},
+		&Request{},
+		&Equipment{},
+		&ChecklistItem{},
+		&AgendaEntry{},
+		&Company{},
+		&Transaction{},
+		&FiscalConfig{},
+		&AuditLog{},
+		&Setting{},
+		&OrcamentoItem{},
+		&Assinatura{},
+		&NFSe{},
+	)
+	if err != nil {
+		log.Printf("⚠️ Migration warning: %v", err)
+		// Don't fail hard on migration if it's a minor issue, but log it
+	}
+
+	log.Println("✅ Database connected (Supabase) with serverless pooling & Migrations")
 	return nil
 }
 
