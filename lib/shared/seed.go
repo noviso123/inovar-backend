@@ -14,6 +14,23 @@ func SeedAdmin() {
 	// Ensure DB connection is available
 	db := GetDB()
 
+	// ⚠️ DANGER: Wipe all data as requested by user (Full Reset)
+	log.Println("🔥 STARTING FULL DATABASE WIPE (TRUNCATE CASCADE)...")
+	// Execute dynamic TRUNCATE on all tables in public schema
+	if err := db.Exec(`
+		DO $$ DECLARE
+			r RECORD;
+		BEGIN
+			FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+				EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+			END LOOP;
+		END $$;
+	`).Error; err != nil {
+		log.Printf("❌ Failed to wipe database: %v", err)
+	} else {
+		log.Println("✅ Database wiped successfully (All tables truncated)")
+	}
+
 	email := "admin@inovar.com"
 	password := "123456"
 
@@ -23,7 +40,7 @@ func SeedAdmin() {
 	mustChange := false
 
 	var user User
-	// Check if user exists
+	// Check if user exists (should not exist after wipe, but safe coding)
 	if err := db.Where("email = ?", email).First(&user).Error; err == nil {
 		// User exists, FORCE UPDATE password and active status
 		if err := db.Model(&user).Updates(map[string]interface{}{
