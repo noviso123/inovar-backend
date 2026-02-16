@@ -130,3 +130,37 @@ type Setting struct {
 	Key   string `json:"key" gorm:"unique;not null"`
 	Value string `json:"value"`
 }
+
+// OrcamentoItem model (Budget)
+type OrcamentoItem struct {
+	ID         uint      `json:"id" gorm:"primaryKey"`
+	RequestID  uint      `json:"requestId" gorm:"column:request_id"`
+	Descricao  string    `json:"descricao"`
+	Quantidade float64   `json:"quantidade"`
+	ValorUnit  float64   `json:"valorUnit" gorm:"column:valor_unit"`
+	Tipo       string    `json:"tipo"` // peca, mao_de_obra
+	Aprovado   bool      `json:"aprovar" gorm:"default:false"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+// Assinatura model
+type Assinatura struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	RequestID uint      `json:"requestId" gorm:"column:request_id"`
+	Tipo      string    `json:"tipo"`                        // cliente, tecnico
+	DataURL   string    `json:"assinatura" gorm:"type:text"` // Base64 image
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// NFSe model (Invoice)
+type NFSe struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	RequestID    uint      `json:"requestId" gorm:"column:request_id"`
+	Numero       string    `json:"numero"`
+	Status       string    `json:"status"` // emitido, cancelado, erro
+	PDFURL       string    `json:"pdfUrl" gorm:"column:pdf_url"`
+	XMLURL       string    `json:"xmlUrl" gorm:"column:xml_url"`
+	MotivoCancel string    `json:"motivoCancel" gorm:"column:motivo_cancel"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}

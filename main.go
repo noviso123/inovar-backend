@@ -7,6 +7,7 @@ import (
 
 	"inovar/api/agenda"
 	"inovar/api/audit"
+	"inovar/api/budget"
 	"inovar/api/checklists"
 	"inovar/api/clients"
 	"inovar/api/company"
@@ -16,6 +17,7 @@ import (
 	"inovar/api/login"
 	"inovar/api/requests"
 	"inovar/api/settings"
+	"inovar/api/signatures"
 	"inovar/api/system"
 	"inovar/api/upload"
 	"inovar/api/users"
@@ -108,9 +110,24 @@ func main() {
 	mux.HandleFunc("GET /api/settings", settings.GetHandler)
 	mux.HandleFunc("PUT /api/settings", settings.UpdateHandler)
 
-	// Fiscal
+	// Fiscal & NFSe
 	mux.HandleFunc("GET /api/fiscal/config", fiscal.ConfigHandler)
 	mux.HandleFunc("POST /api/fiscal/certificate", fiscal.CertificateHandler)
+	mux.HandleFunc("POST /api/requests/{id}/nfse", fiscal.IssueNFSeHandler)
+	mux.HandleFunc("GET /api/requests/{id}/nfse", fiscal.GetNFSeHandler)
+	mux.HandleFunc("DELETE /api/requests/{id}/nfse", fiscal.CancelNFSeHandler)
+	mux.HandleFunc("POST /api/requests/{id}/nfse/cancelar", fiscal.CancelNFSeWithReasonHandler)
+	mux.HandleFunc("GET /api/requests/{id}/nfse/danfse", fiscal.GetDANFSeHandler)
+	mux.HandleFunc("GET /api/requests/{id}/nfse/eventos", fiscal.GetEventosHandler)
+
+	// Budget (Orcamento)
+	mux.HandleFunc("GET /api/requests/orcamento/sugestoes", budget.SugestoesHandler)
+	mux.HandleFunc("POST /api/requests/{id}/orcamento/itens", budget.AddItemHandler)
+	mux.HandleFunc("DELETE /api/requests/{id}/orcamento/itens/{itemId}", budget.RemoveItemHandler)
+	mux.HandleFunc("POST /api/requests/{id}/orcamento/aprovar", budget.AprovarHandler)
+
+	// Signatures
+	mux.HandleFunc("POST /api/requests/{id}/assinatura", signatures.SaveHandler)
 
 	// System
 	mux.HandleFunc("GET /api/system/whatsapp", system.WhatsAppStatusHandler)
