@@ -64,6 +64,7 @@ func InitDB() error {
 		&OrcamentoItem{},
 		&Assinatura{},
 		&NFSe{},
+		&PasswordResetToken{},
 	)
 	if err != nil {
 		log.Printf("⚠️ Migration warning: %v", err)

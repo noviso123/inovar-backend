@@ -240,3 +240,17 @@ type NFSe struct {
 func (NFSe) TableName() string {
 	return "nfse"
 }
+
+// PasswordResetToken model
+type PasswordResetToken struct {
+	ID        string    `json:"id" gorm:"primaryKey;type:uuid"`
+	UserID    string    `json:"userId" gorm:"column:user_id;not null"`
+	Token     string    `json:"token" gorm:"unique;not null"`
+	ExpiresAt time.Time `json:"expiresAt" gorm:"column:expires_at;not null"`
+	Used      bool      `json:"used" gorm:"default:false"`
+	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+}
+
+func (PasswordResetToken) TableName() string {
+	return "password_reset_tokens"
+}

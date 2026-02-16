@@ -1,10 +1,13 @@
 ﻿package login
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"inovar/lib/shared"
 	"log"
 	"net/http"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,11 +36,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find user
+	// Find user - fetch ALL columns needed for auth (no hardcoded Select)
 	var user shared.User
-	// Basic columns confirmed by screenshot
 	if err := shared.GetDB().
-		Select("id, name, email, password_hash, role").
 		Where("email = ?", req.Email).
 		First(&user).Error; err != nil {
 		log.Printf("Login failed for %s: %v", req.Email, err)
@@ -45,7 +46,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if active (if field exists and is false)
+	// Check if active
 	if user.Active != nil && !*user.Active {
 		shared.ErrorResponse(w, http.StatusUnauthorized, "Sua conta está inativa.")
 		return
@@ -72,7 +73,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			"email":              user.Email,
 			"role":               user.Role,
 			"companyId":          user.CompanyID,
+			"active":             user.Active,
 			"mustChangePassword": user.MustChangePassword,
+			"avatarUrl":          user.AvatarURL,
+			"phone":              user.Phone,
 		},
 		"accessToken":  token,
 		"refreshToken": token, // Same for now
@@ -106,8 +110,8 @@ func MeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var user shared.User
 	if err := shared.GetDB().
-		Select("id, name, email, role, company_id, must_change_password").
-		First(&user, userID).Error; err != nil {
+		Where("id = ?", userID).
+		First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -146,7 +150,7 @@ func ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user shared.User
-	if err := shared.GetDB().First(&user, userID).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -186,10 +190,49 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Just a stub for now - requires email service
-	// We verify if user exists but don't reveal it (security best practice) causes ambiguity,
-	// but here we can return success always.
-	// For MVP, we can just say "If email exists, we sent instructions"
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	// Look up user by email
+	var user shared.User
+	if err := shared.GetDB().Where("email = ?", req.Email).First(&user).Error; err != nil {
+		// Security: Don't reveal if email exists or not
+		log.Printf("Forgot password: email %s not found", req.Email)
+		shared.SuccessResponse(w, map[string]string{"message": "Se o e-mail existir, enviaremos instruções."})
+		return
+	}
+
+	// Generate a secure random token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+	resetToken := hex.EncodeToString(tokenBytes)
+
+	// Delete any existing tokens for this user
+	shared.GetDB().Where("user_id = ?", user.ID).Delete(&shared.PasswordResetToken{})
+
+	// Store the token in the database with 1-hour expiration
+	tokenRecord := shared.PasswordResetToken{
+		ID:        generateUUID(),
+		UserID:    user.ID,
+		Token:     resetToken,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+		Used:      false,
+	}
+
+	if err := shared.GetDB().Create(&tokenRecord).Error; err != nil {
+		log.Printf("Failed to store reset token: %v", err)
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to process request")
+		return
+	}
+
+	// Log the reset link (MVP - no email service yet)
+	log.Printf("🔑 PASSWORD RESET TOKEN for %s: %s", req.Email, resetToken)
+	log.Printf("🔗 Reset link: /reset-password?token=%s", resetToken)
 
 	shared.SuccessResponse(w, map[string]string{"message": "Se o e-mail existir, enviaremos instruções."})
 }
@@ -212,8 +255,61 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stub - requires token verification logic
-	shared.SuccessResponse(w, map[string]string{"message": "Senha redefinida com sucesso (Stub)"})
+	if req.Token == "" {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Token é obrigatório")
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		shared.ErrorResponse(w, http.StatusBadRequest, "A senha deve ter no mínimo 6 caracteres")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	// Find the token record
+	var tokenRecord shared.PasswordResetToken
+	if err := shared.GetDB().
+		Where("token = ? AND used = ?", req.Token, false).
+		First(&tokenRecord).Error; err != nil {
+		log.Printf("Reset password: invalid token")
+		shared.ErrorResponse(w, http.StatusBadRequest, "Token inválido ou já utilizado")
+		return
+	}
+
+	// Check expiration
+	if time.Now().After(tokenRecord.ExpiresAt) {
+		log.Printf("Reset password: token expired for user %s", tokenRecord.UserID)
+		shared.ErrorResponse(w, http.StatusBadRequest, "Token expirado. Solicite um novo link de recuperação.")
+		return
+	}
+
+	// Hash the new password
+	hashed, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to hash password")
+		return
+	}
+
+	// Update the user's password
+	if err := shared.GetDB().Model(&shared.User{}).
+		Where("id = ?", tokenRecord.UserID).
+		Updates(map[string]interface{}{
+			"password_hash":        string(hashed),
+			"must_change_password": false,
+		}).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to update password")
+		return
+	}
+
+	// Mark token as used
+	shared.GetDB().Model(&tokenRecord).Update("used", true)
+
+	log.Printf("✅ Password reset successful for user %s", tokenRecord.UserID)
+	shared.SuccessResponse(w, map[string]string{"message": "Senha redefinida com sucesso"})
 }
 
 // UpdateProfileRequest - simplified version of user update
@@ -247,7 +343,7 @@ func UpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user shared.User
-	if err := shared.GetDB().First(&user, userID).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", userID).First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -273,4 +369,17 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// For JWT, logout is primarily handled by the client clearing the token.
 	// We return success to satisfy the frontend.
 	shared.SuccessResponse(w, map[string]string{"message": "Logged out successfully"})
+}
+
+// generateUUID creates a simple UUID v4
+func generateUUID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
+	return hex.EncodeToString(b[:4]) + "-" +
+		hex.EncodeToString(b[4:6]) + "-" +
+		hex.EncodeToString(b[6:8]) + "-" +
+		hex.EncodeToString(b[8:10]) + "-" +
+		hex.EncodeToString(b[10:])
 }

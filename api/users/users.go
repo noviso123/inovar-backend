@@ -1,6 +1,8 @@
 ﻿package users
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"inovar/lib/shared"
 	"net/http"
@@ -29,7 +31,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	// Get users
 	var users []shared.User
 	if err := shared.GetDB().
-		Select("id, name, email, role, company_id, active, created_at").
+		Select("id, name, email, role, company_id, active, phone, avatar_url, created_at").
 		Where("active = ?", true). // Only active users
 		Order("created_at DESC").  // Most recent first
 		Limit(100).                // Prevent huge responses
@@ -42,8 +44,18 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	shared.SuccessResponse(w, users)
 }
 
+// CreateUserRequest combines User fields with a plain password
+type CreateUserRequest struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Email    string  `json:"email"`
+	Password string  `json:"password"`
+	Role     string  `json:"role"`
+	Phone    *string `json:"phone"`
+}
+
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
-	// Validate auth (Check if admin?)
+	// Validate auth
 	token := shared.GetAuthToken(r)
 	if token == "" {
 		shared.ErrorResponse(w, http.StatusUnauthorized, "Missing authorization")
@@ -59,35 +71,45 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user shared.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	// Decode body ONCE into a combined struct
+	var req CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid data")
 		return
 	}
 
-	// Hash password
-	// Assuming user struct has Password field (temporary) or we use a separate struct.
-	// Since shared.User likely has PasswordHash, we need to handle the plain password.
-	// For now, let's assume the frontend sends 'password' which we need to hash.
-	// But shared.User maps 'password_hash'. We might need a DTO.
-	// Let's decode into a struct that has Password string.
-	type CreateUserRequest struct {
-		shared.User
-		Password string `json:"password"`
-	}
-	var req CreateUserRequest
-	// Re-decode to capture password (a bit inefficient but safe)
-	if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.Password != "" {
-		hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		req.User.PasswordHash = string(hash)
+	// Create the user model
+	user := shared.User{
+		ID:    req.ID,
+		Name:  req.Name,
+		Email: req.Email,
+		Role:  req.Role,
+		Phone: req.Phone,
 	}
 
-	if err := shared.GetDB().Create(&req.User).Error; err != nil {
-		shared.ErrorResponse(w, http.StatusInternalServerError, "Create failed")
+	// Generate ID if not provided
+	if user.ID == "" {
+		user.ID = generateUUID()
+	}
+
+	// Hash password
+	if req.Password != "" {
+		hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		user.PasswordHash = string(hash)
+	}
+
+	// Set defaults
+	active := true
+	user.Active = &active
+	mustChange := true
+	user.MustChangePassword = &mustChange
+
+	if err := shared.GetDB().Create(&user).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Create failed: "+err.Error())
 		return
 	}
 
-	shared.SuccessResponse(w, req.User)
+	shared.SuccessResponse(w, user)
 }
 
 func GetHandler(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +130,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var user shared.User
-	if err := shared.GetDB().Select("id, name, email, role, company_id, active, created_at").First(&user, id).Error; err != nil {
+	if err := shared.GetDB().
+		Select("id, name, email, role, company_id, active, phone, avatar_url, created_at").
+		Where("id = ?", id).
+		First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -133,7 +158,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	var user shared.User
-	if err := shared.GetDB().First(&user, id).Error; err != nil {
+	if err := shared.GetDB().Where("id = ?", id).First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
 		return
 	}
@@ -150,9 +175,15 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Name = updates.Name
-	user.Email = updates.Email
-	user.Role = updates.Role
+	if updates.Name != "" {
+		user.Name = updates.Name
+	}
+	if updates.Email != "" {
+		user.Email = updates.Email
+	}
+	if updates.Role != "" {
+		user.Role = updates.Role
+	}
 
 	if updates.Password != "" {
 		hash, _ := bcrypt.GenerateFromPassword([]byte(updates.Password), bcrypt.DefaultCost)
@@ -191,7 +222,19 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	shared.SuccessResponse(w, map[string]string{"message": "User deleted"})
 }
+
 func BlockUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Auth check
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Missing authorization")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Invalid token")
+		return
+	}
+
 	id := r.PathValue("id")
 	if err := shared.InitDB(); err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
@@ -205,6 +248,17 @@ func BlockUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	// Auth check
+	token := shared.GetAuthToken(r)
+	if token == "" {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Missing authorization")
+		return
+	}
+	if _, err := shared.ValidateToken(token); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Invalid token")
+		return
+	}
+
 	id := r.PathValue("id")
 	if err := shared.InitDB(); err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
@@ -220,4 +274,17 @@ func AdminResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	shared.SuccessResponse(w, map[string]interface{}{"success": true, "message": "Password reset to 123456"})
+}
+
+// generateUUID creates a simple UUID v4
+func generateUUID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
+	return hex.EncodeToString(b[:4]) + "-" +
+		hex.EncodeToString(b[4:6]) + "-" +
+		hex.EncodeToString(b[6:8]) + "-" +
+		hex.EncodeToString(b[8:10]) + "-" +
+		hex.EncodeToString(b[10:])
 }
