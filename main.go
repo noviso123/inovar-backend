@@ -39,6 +39,12 @@ func main() {
 	// Define Routes (Go 1.22+)
 	mux := http.NewServeMux()
 
+	// Root Health Check
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Inovar Backend Running"))
+	})
+
 	// Auth
 	mux.HandleFunc("POST /api/login", login.LoginHandler)
 	mux.HandleFunc("GET /api/auth/me", login.MeHandler)
