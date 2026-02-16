@@ -48,3 +48,85 @@ type Request struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
+
+type Equipment struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	Name         string    `json:"name" gorm:"not null"`
+	Brand        string    `json:"brand"`
+	Model        string    `json:"model"`
+	SerialNumber string    `json:"serialNumber"`
+	ClientID     uint      `json:"clientId" gorm:"column:client_id"`
+	Active       bool      `json:"active" gorm:"default:true"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+type ChecklistItem struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	RequestID   uint      `json:"requestId" gorm:"column:request_id"`
+	Description string    `json:"description"`
+	Checked     bool      `json:"checked" gorm:"default:false"`
+	Observation string    `json:"observation"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+type AgendaEntry struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	Title        string    `json:"title"`
+	Start        time.Time `json:"start"`
+	End          time.Time `json:"end"`
+	TechnicianID uint      `json:"technicianId" gorm:"column:technician_id"`
+	RequestID    *uint     `json:"requestId" gorm:"column:request_id"`
+	Description  string    `json:"description"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+type Company struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Name      string    `json:"name"`
+	CNPJ      string    `json:"cnpj"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone"`
+	Address   string    `json:"address"`
+	LogoURL   string    `json:"logoUrl" gorm:"column:logo_url"`
+	Website   string    `json:"website"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type Transaction struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Description string    `json:"description"`
+	Amount      float64   `json:"amount"`
+	Type        string    `json:"type"` // income, expense
+	Category    string    `json:"category"`
+	Date        time.Time `json:"date"`
+	RequestID   *uint     `json:"requestId" gorm:"column:request_id"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type FiscalConfig struct {
+	ID                  uint   `json:"id" gorm:"primaryKey"`
+	CompanyID           uint   `json:"companyId" gorm:"column:company_id"`
+	CertificatePath     string `json:"certificatePath" gorm:"column:certificate_path"`
+	CertificatePassword string `json:"certificatePassword" gorm:"column:certificate_password"`
+	Environment         string `json:"environment"` // homologacao, producao
+	RegimeTributario    string `json:"regimeTributario" gorm:"column:regime_tributario"`
+}
+
+type AuditLog struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UserID    uint      `json:"userId" gorm:"column:user_id"`
+	Entity    string    `json:"entity"`
+	Action    string    `json:"action"` // CREATE, UPDATE, DELETE
+	Details   string    `json:"details"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type Setting struct {
+	ID    uint   `json:"id" gorm:"primaryKey"`
+	Key   string `json:"key" gorm:"unique;not null"`
+	Value string `json:"value"`
+}

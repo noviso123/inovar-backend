@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: inovar-backend
+    env: docker
+    plan: free
+    region: oregon
+    buildCommand: docker build -t inovar-backend .
+    startCommand: ./main
+    envVars:
+      - key: DATABASE_URL
+        sync: false # User must set this manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false # User must set this manually
+      - key: PORT
+        value: 8080

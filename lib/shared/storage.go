@@ -63,3 +63,40 @@ func UploadToSupabase(file *multipart.FileHeader, folder string) (string, error)
 	publicURL := fmt.Sprintf("%s/storage/v1/object/public/attachments/%s", supabaseURL, path)
 	return publicURL, nil
 }
+
+// DeleteFromSupabase deletes a file from Supabase Storage
+func DeleteFromSupabase(filePath string) error {
+	supabaseURL := os.Getenv("SUPABASE_URL")
+	supabaseKey := os.Getenv("SUPABASE_KEY")
+
+	if supabaseURL == "" || supabaseKey == "" {
+		return fmt.Errorf("Supabase credentials not configured")
+	}
+
+	// Delete from Supabase Storage
+	url := fmt.Sprintf("%s/storage/v1/object/attachments/%s", supabaseURL, filePath)
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+supabaseKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusOK { // 200 or 204? Usually 200.
+		// Check for 404?
+		if resp.StatusCode == http.StatusNotFound {
+			return nil // Already deleted
+		}
+		return fmt.Errorf("delete failed with status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
