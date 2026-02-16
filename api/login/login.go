@@ -158,7 +158,8 @@ func ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	user.PasswordHash = string(hashed)
-	user.MustChangePassword = false // Reset flag
+	f := false
+	user.MustChangePassword = &f // Reset flag
 
 	if err := shared.GetDB().Save(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to update password")
