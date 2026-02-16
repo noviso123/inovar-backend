@@ -23,7 +23,7 @@ dist-ssr
 .vercel
 
 # Go
-go.sum
+
 
 # Binaries
 *.exe
