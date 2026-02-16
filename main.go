@@ -39,7 +39,11 @@ func main() {
 
 	// Auth
 	mux.HandleFunc("POST /api/login", login.LoginHandler)
-	mux.HandleFunc("GET /api/me", login.MeHandler) // Added for 'getCurrentUser'
+	mux.HandleFunc("GET /api/auth/me", login.MeHandler)
+	mux.HandleFunc("PUT /api/auth/me", login.UpdateProfileHandler)
+	mux.HandleFunc("POST /api/auth/change-password", login.ChangePasswordHandler)
+	mux.HandleFunc("POST /api/auth/forgot-password", login.ForgotPasswordHandler)
+	mux.HandleFunc("POST /api/auth/reset-password", login.ResetPasswordHandler)
 
 	// Clients
 	mux.HandleFunc("GET /api/clients", clients.ListHandler)

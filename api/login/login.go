@@ -135,3 +135,155 @@ func MeHandler(w http.ResponseWriter, r *http.Request) {
 
 	shared.SuccessResponse(w, user)
 }
+
+// ChangePasswordRequest struct
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+func ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	token := shared.GetAuthToken(r)
+	userID, err := shared.ValidateToken(token)
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	var user shared.User
+	if err := shared.GetDB().First(&user, userID).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Senha atual incorreta")
+		return
+	}
+
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	user.PasswordHash = string(hashed)
+	user.MustChangePassword = false // Reset flag
+
+	if err := shared.GetDB().Save(&user).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to update password")
+		return
+	}
+
+	shared.SuccessResponse(w, map[string]string{"message": "Senha alterada com sucesso"})
+}
+
+// ForgotPasswordRequest struct
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req ForgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	// Just a stub for now - requires email service
+	// We verify if user exists but don't reveal it (security best practice) causes ambiguity,
+	// but here we can return success always.
+	// For MVP, we can just say "If email exists, we sent instructions"
+
+	shared.SuccessResponse(w, map[string]string{"message": "Se o e-mail existir, enviaremos instruções."})
+}
+
+// ResetPasswordRequest struct
+type ResetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
+func ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req ResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	// Stub - requires token verification logic
+	shared.SuccessResponse(w, map[string]string{"message": "Senha redefinida com sucesso (Stub)"})
+}
+
+// UpdateProfileRequest - simplified version of user update
+type UpdateProfileRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func UpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "PUT" {
+		shared.ErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	token := shared.GetAuthToken(r)
+	userID, err := shared.ValidateToken(token)
+	if err != nil {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		shared.ErrorResponse(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	if err := shared.InitDB(); err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Database error")
+		return
+	}
+
+	var user shared.User
+	if err := shared.GetDB().First(&user, userID).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	// Update allowed fields
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+
+	if err := shared.GetDB().Save(&user).Error; err != nil {
+		shared.ErrorResponse(w, http.StatusInternalServerError, "Failed to update profile")
+		return
+	}
+
+	shared.SuccessResponse(w, user)
+}
