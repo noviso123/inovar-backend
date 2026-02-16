@@ -36,9 +36,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var user shared.User
 	if err := shared.GetDB().
 		Select("id, name, email, password_hash, role, company_id, must_change_password, active").
-		Where("email = ? AND active = ?", req.Email, true).
+		Where("email = ?", req.Email). // Case sensitivity depends on DB, but email should be unique
 		First(&user).Error; err != nil {
 		shared.ErrorResponse(w, http.StatusUnauthorized, "Credenciais inválidas")
+		return
+	}
+
+	// Check if active
+	if !user.Active {
+		shared.ErrorResponse(w, http.StatusUnauthorized, "Sua conta está inativa. Entre em contato com o suporte.")
 		return
 	}
 
