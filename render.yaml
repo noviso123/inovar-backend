@@ -11,5 +11,7 @@ services:
         sync: false # User must set this manually in Render dashboard
       - key: JWT_SECRET
         sync: false # User must set this manually
-      - key: PORT
-        value: 8080
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
